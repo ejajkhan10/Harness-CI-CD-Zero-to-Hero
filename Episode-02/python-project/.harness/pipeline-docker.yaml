@@ -19,7 +19,8 @@ pipeline:
   ##################################################
   # CHANGE THIS: Your project ID
   ###################################################
-  projectIdentifier: HarnessCICDZerotoHero
+  #projectIdentifier: HarnessCICDZerotoHero
+  projectIdentifier: default_project
   ####################################################
   # CHANGE THIS: Your org name
   ###################################################
