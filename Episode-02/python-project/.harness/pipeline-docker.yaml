@@ -1,24 +1,10 @@
-# ============================================
-# PIPELINE: Python App - Harness Cloud + Push to Docker Hub
-# ============================================
-# CHANGE THESE 4 VALUES:
-#   1. projectIdentifier → Your project ID (from URL)
-#   2. orgIdentifier → Your org name (usually "default")
-#   3. connectorRef (codebase) → Your GitHub connector
-#   4. connectorRef (docker) → Your Docker Hub connector
-#
-# PREREQUISITES:
-#   - Harness Cloud enabled (credit card verification, no charge)
-#   - Docker Hub connector created in Harness (account.dockerhub)
-#   - Secret "docker-hub-password" in Harness
-#   - Variable "docker_username" in Harness
-# ============================================
 pipeline:
   name: python-docker-pipeline
   identifier: python_docker_pipeline
   projectIdentifier: default_project
   orgIdentifier: default
-  tags: {}
+  tags:
+    ai_generated: ""
   properties:
     ci:
       codebase:
@@ -129,16 +115,17 @@ pipeline:
                       echo "=== Step 7: Deleting Docker Hub Image ==="
                       echo ""
 
-                      # Store credentials in variables (avoids JSON escaping issues)
+                      # Store credentials
                       DOCKER_USER="<+variable.docker_username>"
                       DOCKER_PASS='<+secrets.getValue("docker-hub-password")>'
 
-                      # Use proper JSON escaping with heredoc
+                      # Build JSON payload properly using printf (no heredoc whitespace issues)
+                      JSON_PAYLOAD=$(printf '{"username":"%s","password":"%s"}' "$DOCKER_USER" "$DOCKER_PASS")
+
+                      # Login to Docker Hub API
                       RESPONSE=$(curl -s -H "Content-Type: application/json" -X POST \
-                        --data-binary @- https://hub.docker.com/v2/users/login/ <<EOF
-                      {"username":"${DOCKER_USER}","password":"${DOCKER_PASS}"}
-                      EOF
-                      )
+                        -d "$JSON_PAYLOAD" \
+                        https://hub.docker.com/v2/users/login/)
 
                       # Check if login was successful
                       TOKEN=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('token',''))" 2>/dev/null)
@@ -187,3 +174,9 @@ pipeline:
                       echo "  Step 7: Image deleted from Docker Hub"
                       echo "  Step 8: Deletion verified"
                       echo "========================================="
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: MarkAsFailure
